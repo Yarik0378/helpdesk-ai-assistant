@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment: &app-env
+      DATABASE_URL: postgresql://app:app@db:5432/app
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-haiku-5-5}
+      LLM_RPM: ${LLM_RPM:-60}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: python -m app.worker
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  helpdesk:
+    build: .
+    command: uvicorn mock_helpdesk.main:app --host 0.0.0.0 --port 9000
+    environment:
+      FAIL_RATE: ${HELPDESK_FAIL_RATE:-0.2}
+      SLOW_RATE: ${HELPDESK_SLOW_RATE:-0.1}
+    ports:
+      - "9000:9000"
+
+volumes:
+  pgdata:
