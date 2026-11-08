@@ -9,7 +9,7 @@ API_URL = "https://api.anthropic.com/v1/messages"
 MODEL = os.getenv("LLM_MODEL", "claude-haiku-5-5")
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 # the brief says one call takes 5-30s; the stub mode imitates exactly that
-STUB_DELAY = (5.0, 30.0)
+STUB_DELAY = (float(os.getenv("STUB_DELAY_MIN", "5")), float(os.getenv("STUB_DELAY_MAX", "30")))
 
 
 class RetryableLLMError(Exception):
